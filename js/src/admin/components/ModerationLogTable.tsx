@@ -21,7 +21,7 @@ export default class ModerationLogTable extends Component {
         try {
             const response = await app.request<any>({
                 method: 'GET',
-                url: app.forum.attribute('apiUrl') + '/moderation-logs',
+                url: app.forum.attribute('apiUrl') + '/moderation-logs?flagged=1',
             });
             this.logs = response.data || [];
         } catch (e: any) {

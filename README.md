@@ -15,22 +15,14 @@ OpenAI-powered auto-moderation for Flarum. Scans posts, discussion titles, usern
 
 ## Requirements
 
-- Flarum >= 2.0 (for `^2.0` tag) or Flarum >= 1.8 (for `^1.0` tag)
-- PHP >= 8.2 (for Flarum 2.0)
+- Flarum >= 1.8
+- PHP >= 8.0
 - OpenAI API key
 
 ## Installation
 
-### For Flarum 2.x (Recommended)
 ```bash
 composer require tapao/auto-ai-moderation
-php flarum migrate
-php flarum assets:publish
-```
-
-### For Flarum 1.x
-```bash
-composer require tapao/auto-ai-moderation:^1.0
 php flarum migrate
 php flarum assets:publish
 ```

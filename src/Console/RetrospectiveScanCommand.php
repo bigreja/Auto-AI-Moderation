@@ -13,6 +13,13 @@ use Symfony\Component\Console\Input\InputOption;
 
 class RetrospectiveScanCommand extends AbstractCommand
 {
+    public function __construct(
+        protected ContentModerator $moderator,
+        protected ActionHandler $actionHandler,
+    ) {
+        parent::__construct();
+    }
+
     protected function configure(): void
     {
         $this->setName('moderationai:scan')
@@ -28,32 +35,32 @@ class RetrospectiveScanCommand extends AbstractCommand
         $limit = (int) $this->input->getOption('limit');
         $since = $this->input->getOption('since');
 
-        /** @var ContentModerator $moderator */
-        $moderator = resolve(ContentModerator::class);
-        /** @var ActionHandler $actionHandler */
-        $actionHandler = resolve(ActionHandler::class);
+        $moderator     = $this->moderator;
+        $actionHandler = $this->actionHandler;
 
         $this->info("Starting retrospective scan: type=$type, limit=$limit");
 
         $query = match($type) {
-            'post'       => Post::query()->whereNotNull('content'),
+            'post'       => Post::query()->where('type', 'comment')->whereNotNull('content'),
             'discussion' => Discussion::query()->whereNotNull('title'),
             'user'       => User::query(),
             default      => throw new \InvalidArgumentException("Unknown type: $type"),
         };
 
+        $timestampCol = $type === 'user' ? 'joined_at' : 'created_at';
+
         if ($since) {
-            $query->where('created_at', '>=', $since);
+            $query->where($timestampCol, '>=', $since);
         }
 
         $count = 0;
-        $query->orderByDesc('created_at')->take($limit)->get()->each(function ($record) use (
+        $query->orderByDesc($timestampCol)->take($limit)->get()->each(function ($record) use (
             $type, $moderator, $actionHandler, &$count
         ) {
             [$texts, $images] = match($type) {
-                'post'       => [[strip_tags($record->content ?? '')], $moderator->extractImageUrls($record->content ?? '')],
+                'post'       => [[strip_tags(is_string($record->content) ? $record->content : '')], is_string($record->content) ? $moderator->extractImageUrls($record->content) : []],
                 'discussion' => [[$record->title ?? ''], []],
-                'user'       => [[$record->username ?? ''], array_filter([$record->avatar_url])],
+                'user'       => [[$record->username ?? ''], array_values(array_filter([$record->avatar_url]))],
             };
 
             $hash = $moderator->contentHash($texts, $images);
@@ -81,8 +88,9 @@ class RetrospectiveScanCommand extends AbstractCommand
 
             if ($result->flagged) {
                 $this->warn("  ⚑ Flagged $type #{$record->id}: " . json_encode($result->topViolation()));
-                $actionHandler->handle($result, $record, $type, $log);
             }
+
+            $actionHandler->handle($result, $record, $type, $log);
 
             $count++;
         });

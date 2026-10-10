@@ -2,6 +2,7 @@
 
 namespace Tapao\ModerationAI\Trust;
 
+use Carbon\Carbon;
 use Flarum\User\User;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Tapao\ModerationAI\Model\ModerationLog;
@@ -28,7 +29,7 @@ class UserTrustScore
         // abs() keeps this correct across Carbon 2 (Flarum 1.x, unsigned) and
         // Carbon 3 (Flarum 2.x, signed — would otherwise return a negative).
         $ageDays    = $user->joined_at
-            ? abs(now()->diffInDays($user->joined_at))
+            ? abs(Carbon::now()->diffInDays($user->joined_at))
             : 0;
 
         // Score formula: clean ratio (70%) + account age factor (30%, max 30 days = full)
@@ -37,7 +38,13 @@ class UserTrustScore
         $score     = max(0, min(100, $score));
 
         $user->moderation_trust_score = $score;
-        $user->saveQuietly();
+        if (method_exists($user, 'saveQuietly')) {
+            $user->saveQuietly();
+        } else {
+            User::withoutEvents(function () use ($user) {
+                $user->save();
+            });
+        }
 
         return $score;
     }

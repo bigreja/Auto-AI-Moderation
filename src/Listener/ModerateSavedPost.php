@@ -26,19 +26,24 @@ class ModerateSavedPost
         $post  = $event->post;
         $actor = $event->actor;
 
+        // Only moderate standard comment posts (skip event posts where content may be an array)
+        if ($post->type !== 'comment') {
+            return;
+        }
+
         // Exempt admins and configured groups
         $exemptGroups = json_decode($this->settings->get('moderationai.exempt_groups', '[1]'), true);
         if (!is_array($exemptGroups)) $exemptGroups = [1];
         if ($actor->isAdmin() || $actor->groups()->whereIn('id', $exemptGroups)->exists()) return;
 
-        $rawBody   = $post->content ?? '';
+        $rawBody   = is_string($post->content) ? $post->content : '';
         $plainText = strip_tags($rawBody);
         $imageUrls = $this->moderator->extractImageUrls($rawBody);
 
         $hash   = $this->moderator->contentHash([$plainText], $imageUrls);
         $postId = $post->id;
 
-        // Skip dedup check for new posts (no ID yet); for edits, skip unchanged content
+        // Skip dedup check if unchanged
         if ($postId !== null) {
             $existing = ModerationLog::where('content_type', 'post')
                 ->where('content_id', $postId)
@@ -48,7 +53,7 @@ class ModerateSavedPost
             if ($existing) return;
         }
 
-        // Phase 3: async only for existing posts (new posts have no ID to queue with)
+        // Async mode check
         $asyncMode = $this->settings->get('moderationai.mode', 'sync') === 'async';
         $needsSync = $this->trustScore->requiresSync($actor);
 
@@ -72,8 +77,6 @@ class ModerateSavedPost
             'content_hash'    => $hash,
         ]);
 
-        if ($result->flagged) {
-            $this->actionHandler->handle($result, $post, 'post', $log);
-        }
+        $this->actionHandler->handle($result, $post, 'post', $log);
     }
 }

@@ -53,8 +53,6 @@ class ModerateSavedDiscussion
             'content_hash'    => $hash,
         ]);
 
-        if ($result->flagged) {
-            $this->actionHandler->handle($result, $discussion, 'discussion', $log);
-        }
+        $this->actionHandler->handle($result, $discussion, 'discussion', $log);
     }
 }

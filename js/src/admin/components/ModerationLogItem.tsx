@@ -5,20 +5,24 @@ import Button from 'flarum/common/components/Button';
 export default class ModerationLogItem extends Component {
     view() {
         const { log, onReview } = this.attrs;
-        const attrs    = log.attributes || {};
-        const scores   = attrs.categoryScores || {};
-        const topCat   = Object.entries(scores).sort((a: any, b: any) => b[1] - a[1])[0];
-        const reviewed = attrs.reviewedAt != null;
-        const decision = attrs.reviewDecision;
+        const attrs       = log.attributes || {};
+        const scores      = attrs.category_scores || attrs.categoryScores || {};
+        const topCat      = Object.entries(scores).sort((a: any, b: any) => b[1] - a[1])[0];
+        const reviewed    = (attrs.reviewed_at ?? attrs.reviewedAt) != null;
+        const decision    = attrs.review_decision ?? attrs.reviewDecision;
+        const contentType = attrs.content_type ?? attrs.contentType;
+        const contentId   = attrs.content_id ?? attrs.contentId;
+        const field       = attrs.field;
+        const actionTaken = attrs.action_taken ?? attrs.actionTaken;
 
         return (
             <tr className={`ModerationLogItem ${reviewed ? 'reviewed' : 'pending'}`}>
-                <td>{attrs.contentType}</td>
-                <td>{attrs.contentId}</td>
-                <td>{attrs.field}</td>
+                <td>{contentType}</td>
+                <td>{contentId}</td>
+                <td>{field}</td>
                 <td>{topCat?.[0] ?? '—'}</td>
                 <td>{topCat ? (parseFloat(topCat[1] as string) * 100).toFixed(0) + '%' : '—'}</td>
-                <td>{attrs.actionTaken ?? '—'}</td>
+                <td>{actionTaken ?? '—'}</td>
                 <td>
                     {reviewed ? (
                         <span className={`ReviewDecision ReviewDecision--${decision}`}>
@@ -51,17 +55,8 @@ export default class ModerationLogItem extends Component {
     async approve(id: string, onReview: () => void) {
         try {
             await app.request({
-                method: 'PATCH',
-                url: app.forum.attribute('apiUrl') + `/moderation-logs/${id}`,
-                body: {
-                    data: {
-                        type: 'moderation-logs',
-                        id: id,
-                        attributes: {
-                            reviewDecision: 'approved'
-                        }
-                    }
-                }
+                method: 'POST',
+                url: app.forum.attribute('apiUrl') + `/moderation-logs/${id}/approve`,
             });
         } finally {
             onReview();
@@ -71,17 +66,8 @@ export default class ModerationLogItem extends Component {
     async reject(id: string, onReview: () => void) {
         try {
             await app.request({
-                method: 'PATCH',
-                url: app.forum.attribute('apiUrl') + `/moderation-logs/${id}`,
-                body: {
-                    data: {
-                        type: 'moderation-logs',
-                        id: id,
-                        attributes: {
-                            reviewDecision: 'rejected'
-                        }
-                    }
-                }
+                method: 'POST',
+                url: app.forum.attribute('apiUrl') + `/moderation-logs/${id}/reject`,
             });
         } finally {
             onReview();

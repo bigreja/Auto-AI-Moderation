@@ -2,6 +2,7 @@
 
 namespace Tapao\ModerationAI\Webhook;
 
+use Carbon\Carbon;
 use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client;
 
@@ -27,7 +28,7 @@ class WebhookNotifier
             'category'     => $violation['category'],
             'score'        => $violation['score'],
             'action_taken' => $actionTaken,
-            'timestamp'    => now()->toIso8601String(),
+            'timestamp'    => Carbon::now()->toIso8601String(),
         ];
 
         try {

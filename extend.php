@@ -3,8 +3,7 @@
 use Flarum\Extend;
 use Tapao\ModerationAI\Listener;
 use Tapao\ModerationAI\Console\RetrospectiveScanCommand;
-use Tapao\ModerationAI\Api\Resource\ModerationLogResource;
-use Tapao\ModerationAI\Api\Controller\TestConnectionController;
+use Tapao\ModerationAI\Api\Controller;
 
 return [
     // ── Frontend ──────────────────────────────────────────────────────────
@@ -77,12 +76,13 @@ return [
                 ->serializeToForum('moderationai.warn_suspend_hours', 'moderationai.warn_suspend_hours', 'intval', 0),
         ]),
 
-    // ── Moderation Log API (JSON:API resource) ────────────────────────────
-    new Extend\ApiResource(ModerationLogResource::class),
-
-    // ── Test Connection Route (kept as raw handler — non-CRUD action) ─────
+    // ── Admin API Routes (log review queue & test connection) ─────────────
     (new Extend\Routes('api'))
-        ->post('/moderationai-test', 'moderationai.test', TestConnectionController::class),
+        ->get('/moderation-logs',               'moderationai.logs.index',   Controller\ListModerationLogsController::class)
+        ->post('/moderation-logs/{id}/approve', 'moderationai.logs.approve', Controller\ApproveModerationLogController::class)
+        ->post('/moderation-logs/{id}/reject',  'moderationai.logs.reject',  Controller\RejectModerationLogController::class)
+        ->patch('/moderation-logs/{id}',        'moderationai.logs.update',  Controller\UpdateModerationLogController::class)
+        ->post('/moderationai-test',            'moderationai.test',         Controller\TestConnectionController::class),
 
     // ── Artisan Commands ─────────────────────────────────────────────────
     (new Extend\Console())

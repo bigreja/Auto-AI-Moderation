@@ -23,23 +23,34 @@ class ModerateSavedUser
 
         if ($actor && $actor->isAdmin()) return;
 
-        // Phase 1 text fields
+        $isNew = $user->wasRecentlyCreated;
+
+        // Check changed text fields on create or update
         $textFields = array_values(array_filter([
-            $user->isDirty('username')     ? $user->username     : null,
-            $user->isDirty('display_name') ? $user->display_name : null,
+            ($isNew || $user->wasChanged('username'))     ? $user->username     : null,
+            ($isNew || $user->wasChanged('display_name')) ? $user->display_name : null,
         ]));
 
-        // Phase 2: avatar image
+        // Check avatar image
         $imageUrls = [];
-        if ($user->isDirty('avatar_url')
+        if (($isNew || $user->wasChanged('avatar_url'))
             && $this->settings->get('moderationai.scan_images', true)) {
             $avatarUrl = $user->avatar_url;
-            if (filter_var($avatarUrl, FILTER_VALIDATE_URL)) {
+            if ($avatarUrl && filter_var($avatarUrl, FILTER_VALIDATE_URL)) {
                 $imageUrls[] = $avatarUrl;
             }
         }
 
         if (empty($textFields) && empty($imageUrls)) return;
+
+        $hash = $this->moderator->contentHash($textFields, $imageUrls);
+        if ($user->id && ModerationLog::where('content_type', 'user')
+            ->where('content_id', $user->id)
+            ->where('field', 'username/avatar')
+            ->where('content_hash', $hash)
+            ->exists()) {
+            return;
+        }
 
         $result = $this->moderator->moderate($textFields, $imageUrls, $user);
         if (!$result) return;
@@ -52,10 +63,9 @@ class ModerateSavedUser
             'flagged'         => $result->flagged,
             'categories'      => $result->categories,
             'category_scores' => $result->categoryScores,
+            'content_hash'    => $hash,
         ]);
 
-        if ($result->flagged) {
-            $this->actionHandler->handle($result, $user, 'user', $log);
-        }
+        $this->actionHandler->handle($result, $user, 'user', $log);
     }
 }

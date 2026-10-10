@@ -8,6 +8,8 @@ class FlagAction
 {
     public function execute(mixed $content, string $contentType, string $category, float $score): void
     {
+        if (!$content) return;
+
         // Integration with flarum/flags if installed
         if (class_exists(\Flarum\Flags\Flag::class) && $contentType === 'post') {
             $flag = new \Flarum\Flags\Flag();

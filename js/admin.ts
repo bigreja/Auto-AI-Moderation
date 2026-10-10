@@ -1,3 +1,8 @@
 import app from 'flarum/admin/app';
-export { default as extend } from './src/admin/extend';
-app.initializers.add('tapao-moderationai', () => {});
+import ModerationSettingsPage from './src/admin/components/ModerationSettingsPage';
+
+app.initializers.add('tapao-moderationai', () => {
+    app.extensionData
+        .for('tapao-auto-ai-moderation')
+        .registerPage(ModerationSettingsPage);
+});

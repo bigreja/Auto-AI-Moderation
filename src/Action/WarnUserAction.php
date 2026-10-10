@@ -2,6 +2,7 @@
 
 namespace Tapao\ModerationAI\Action;
 
+use Carbon\Carbon;
 use Flarum\Settings\SettingsRepositoryInterface;
 
 class WarnUserAction
@@ -42,7 +43,7 @@ class WarnUserAction
             ? "Category: $category (" . round($score * 100) . "% confidence)"
             : null;
         $warning->points_given = (int) $this->settings->get('moderationai.warn_points', 1);
-        $warning->created_at   = now();
+        $warning->created_at   = Carbon::now();
         $warning->save();
 
         // Recalculate user strike count so fof/warnings suspension thresholds fire
@@ -54,7 +55,7 @@ class WarnUserAction
     private function suspendUser(mixed $user): void
     {
         $hours = (int) $this->settings->get('moderationai.warn_suspend_hours', 24);
-        $user->suspended_until = now()->addHours($hours);
+        $user->suspended_until = Carbon::now()->addHours($hours);
         $user->save();
     }
 

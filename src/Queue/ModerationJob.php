@@ -2,6 +2,9 @@
 
 namespace Tapao\ModerationAI\Queue;
 
+use Illuminate\Bus\Queueable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Tapao\ModerationAI\Moderator\ContentModerator;
 use Tapao\ModerationAI\Action\ActionHandler;
@@ -9,6 +12,8 @@ use Tapao\ModerationAI\Model\ModerationLog;
 
 class ModerationJob implements ShouldQueue
 {
+    use InteractsWithQueue, Queueable, SerializesModels;
+
     public int $tries   = 3;
     public int $backoff = 10;
 
@@ -22,7 +27,7 @@ class ModerationJob implements ShouldQueue
 
     public function handle(ContentModerator $moderator, ActionHandler $actionHandler): void
     {
-        $hash   = $moderator->contentHash($this->textInputs, $this->imageUrls);
+        $hash = $moderator->contentHash($this->textInputs, $this->imageUrls);
 
         // Skip if already processed (guard against duplicate runs on retry)
         if (ModerationLog::where('content_type', $this->contentType)
@@ -60,7 +65,7 @@ class ModerationJob implements ShouldQueue
             'content_hash'    => $hash,
         ]);
 
-        if ($result->flagged && $model) {
+        if ($model) {
             $actionHandler->handle($result, $model, $this->contentType, $log);
         }
     }

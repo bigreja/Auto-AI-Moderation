@@ -43,13 +43,29 @@ class ContentModerator
         return $this->client->moderate($inputs);
     }
 
-    public function extractImageUrls(string $html): array
+    public function extractImageUrls(string $content): array
     {
-        preg_match_all('/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $html, $matches);
-        return array_values(array_filter(
-            $matches[1] ?? [],
+        $urls = [];
+
+        // HTML img tags
+        if (preg_match_all('/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $content, $matches)) {
+            $urls = array_merge($urls, $matches[1] ?? []);
+        }
+
+        // Markdown images: ![alt](url)
+        if (preg_match_all('/!\[.*?\]\((https?:\/\/[^\s\)]+)\)/i', $content, $matches)) {
+            $urls = array_merge($urls, $matches[1] ?? []);
+        }
+
+        // BBCode images: [img]url[/img]
+        if (preg_match_all('/\[img\](https?:\/\/[^\[]+)\[\/img\]/i', $content, $matches)) {
+            $urls = array_merge($urls, $matches[1] ?? []);
+        }
+
+        return array_values(array_unique(array_filter(
+            $urls,
             fn($url) => filter_var($url, FILTER_VALIDATE_URL)
-        ));
+        )));
     }
 
     public function contentHash(array $texts, array $imageUrls = []): string
