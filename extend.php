@@ -15,9 +15,9 @@ return [
 
     // ── Core Events ───────────────────────────────────────────────────────
     (new Extend\Event())
-        ->listen(\Flarum\Post\Event\Saved::class,       Listener\ModerateSavedPost::class)
-        ->listen(\Flarum\Discussion\Event\Saved::class, Listener\ModerateSavedDiscussion::class)
-        ->listen(\Flarum\User\Event\Saved::class,       Listener\ModerateSavedUser::class),
+        ->listen(\Flarum\Post\Event\Saving::class,       Listener\ModerateSavingPost::class)
+        ->listen(\Flarum\Discussion\Event\Saving::class, Listener\ModerateSavingDiscussion::class)
+        ->listen(\Flarum\User\Event\Saving::class,       Listener\ModerateSavingUser::class),
 
     // ── Bridge: blomstra/flarum-ext-upload ────────────────────────────────
     (new Extend\Conditional())

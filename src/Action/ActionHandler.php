@@ -47,24 +47,48 @@ class ActionHandler
             return;
         }
 
-        $actionTaken = 'none';
+        $actionTaken     = 'none';
+        $matchedCategory = null;
+        $matchedScore    = 0.0;
+        $matchedAction   = 'flag';
 
         foreach (self::CATEGORY_PRIORITY as $category) {
-            $score     = $result->categoryScores[$category] ?? 0;
+            $score     = (float) ($result->categoryScores[$category] ?? 0);
             $threshold = (float) $this->settings->get("moderationai.threshold.$category", 0.80);
             $action    = $this->settings->get("moderationai.action.$category", 'flag');
 
-            if ($score >= $threshold) {
-                match($action) {
-                    'flag'   => $this->flagAction->execute($content, $contentType, $category, $score),
-                    'hide'   => $this->hideAction->execute($content),
-                    'delete' => $this->deleteAction->execute($content),
-                    'warn'   => $this->warnAction->execute($userToScore, $category, $score),
-                    default  => null,
-                };
-                $actionTaken = $action;
+            // Trigger if score exceeds threshold OR if OpenAI flagged this category
+            if ($score >= $threshold || !empty($result->categories[$category])) {
+                $matchedCategory = $category;
+                $matchedScore    = $score;
+                $matchedAction   = $action;
                 break;
             }
+        }
+
+        // If flagged by AI but no category matched threshold, fall back to top violation
+        if (!$matchedCategory) {
+            $top = $result->topViolation();
+            if ($top) {
+                $matchedCategory = $top['category'];
+                $matchedScore    = $top['score'];
+                $matchedAction   = $this->settings->get("moderationai.action.{$matchedCategory}", 'flag');
+            } else {
+                $matchedCategory = 'general';
+                $matchedScore    = 1.0;
+                $matchedAction   = 'flag';
+            }
+        }
+
+        if ($matchedCategory) {
+            match($matchedAction) {
+                'flag'   => $this->flagAction->execute($content, $contentType, $matchedCategory, $matchedScore),
+                'hide'   => $this->hideAction->execute($content),
+                'delete' => $this->deleteAction->execute($content),
+                'warn'   => $this->warnAction->execute($userToScore, $matchedCategory, $matchedScore),
+                default  => null,
+            };
+            $actionTaken = $matchedAction;
         }
 
         if ($log) {

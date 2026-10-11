@@ -16,13 +16,16 @@ class ContentModerator
 
     public function moderate(array $textInputs = [], array $imageUrls = [], ?\Flarum\User\User $user = null): ?ModerationResult
     {
-        if (!$this->settings->get('moderationai.enabled', false)) return null;
+        $enabled = $this->settings->get('moderationai.enabled');
+        if ($enabled !== null && !filter_var($enabled, FILTER_VALIDATE_BOOLEAN)) {
+            return null;
+        }
 
         // Phase 5: skip moderation for high-trust users
         if ($user && $this->trustScore->shouldSkip($user)) return null;
 
         // Phase 2: gate image scanning by setting
-        if (!$this->settings->get('moderationai.scan_images', true)) {
+        if (!filter_var($this->settings->get('moderationai.scan_images', true), FILTER_VALIDATE_BOOLEAN)) {
             $imageUrls = [];
         }
 

@@ -31,7 +31,8 @@ class OpenAIModerationClient
     public function moderate(array $inputs): ModerationResult
     {
         if (empty($this->apiKey)) {
-            throw new \RuntimeException('ModerationAI: OpenAI API key not configured.');
+            error_log('ModerationAI: OpenAI API key not configured.');
+            return ModerationResult::safe($this->model);
         }
 
         try {
@@ -49,7 +50,7 @@ class OpenAIModerationClient
             $data = json_decode($response->getBody()->getContents(), true);
             return ModerationResult::fromApiResponse($data);
 
-        } catch (\GuzzleHttp\Exception\GuzzleException $e) {
+        } catch (\Throwable $e) {
             error_log('ModerationAI API error: ' . $e->getMessage());
             return ModerationResult::safe($this->model);
         }
