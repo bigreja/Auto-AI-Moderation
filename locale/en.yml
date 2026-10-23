@@ -29,5 +29,6 @@ tapao-moderationai:
       decision_approved: "✓ Approved"
       decision_rejected: "✗ Rejected (restored)"
   forum:
+    ai_flagged: "AI flagged"
     post_under_review: "Your post is being reviewed by our moderation system and will appear shortly."
     upload_rejected: "This file was rejected by the content moderation system."

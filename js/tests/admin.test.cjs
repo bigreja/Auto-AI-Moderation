@@ -84,3 +84,61 @@ test('distributed admin bundle registers and renders settings through the Flarum
     assert.ok(JSON.stringify(content).includes('tapao-moderationai.admin.settings.api_key_label'));
     assert.ok(JSON.stringify(content).includes('tapao-moderationai.admin.settings.thresholds_heading'));
 });
+
+test('distributed forum bundle labels AI flags and preserves other flag reasons', () => {
+    const initializers = [];
+    class Post {}
+    const app = {
+        initializers: {
+            add(name, initialize, priority) {
+                initializers.push({ initialize, priority });
+            },
+        },
+        translator: {
+            trans(key) {
+                assert.equal(key, 'tapao-moderationai.forum.ai_flagged');
+                return 'AI flagged';
+            },
+        },
+    };
+    const modules = new Map([
+        ['forum/app', app],
+        ['forum/components/Post', Post],
+        ['common/extend', {
+            override(target, method, callback) {
+                const original = target[method];
+                target[method] = function (...args) {
+                    return callback.call(this, original.bind(this), ...args);
+                };
+            },
+        }],
+    ]);
+
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../dist/forum.js'), 'utf8'), {
+        flarum: {
+            reg: {
+                get(namespace, name) {
+                    assert.equal(namespace, 'core');
+                    assert.ok(modules.has(name), `Unexpected core module: ${name}`);
+                    return modules.get(name);
+                },
+            },
+        },
+        module: { exports: {} },
+    });
+
+    assert.equal(initializers.length, 1);
+    assert.ok(initializers[0].priority < 0);
+    assert.doesNotThrow(() => initializers[0].initialize());
+    assert.equal(Post.prototype.flagReason, undefined);
+
+    Post.prototype.flagReason = function (flag) {
+        return `${this.author}: ${flag.type()}`;
+    };
+    initializers[0].initialize();
+    const post = new Post();
+    post.author = 'Moderator';
+    assert.equal(post.flagReason({ type: () => 'ai_moderation' }), 'AI flagged');
+    assert.equal(post.flagReason({ type: () => 'user' }), 'Moderator: user');
+    assert.equal(post.flagReason({ type: () => 'approval' }), 'Moderator: approval');
+});
