@@ -22,6 +22,8 @@ export default class ModerationSettingsPage extends ExtensionPage {
 
     content() {
         return (
+            <div className="ExtensionPage-settings">
+                <div className="container">
             <div className="ModerationSettingsPage">
                 <h2>{app.translator.trans('tapao-moderationai.admin.settings.title')}</h2>
 
@@ -146,6 +148,8 @@ export default class ModerationSettingsPage extends ExtensionPage {
                 {/* Moderation log review queue */}
                 <h3>{app.translator.trans('tapao-moderationai.admin.log.title')}</h3>
                 <ModerationLogTable />
+            </div>
+                </div>
             </div>
         );
     }

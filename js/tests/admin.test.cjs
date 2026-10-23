@@ -76,7 +76,10 @@ test('distributed admin bundle registers and renders settings through the Flarum
     assert.ok(page instanceof ExtensionPage);
     page.oninit({ attrs: { id: extensionId } });
     const content = page.content();
-    assert.equal(content.attrs.className, 'ModerationSettingsPage');
+    assert.equal(content.attrs.className, 'ExtensionPage-settings');
+    const container = content.children[0];
+    assert.equal(container.attrs.className, 'container');
+    assert.equal(container.children[0].attrs.className, 'ModerationSettingsPage');
     assert.ok(JSON.stringify(content).includes('"type":"password"'));
     assert.ok(JSON.stringify(content).includes('tapao-moderationai.admin.settings.api_key_label'));
     assert.ok(JSON.stringify(content).includes('tapao-moderationai.admin.settings.thresholds_heading'));
