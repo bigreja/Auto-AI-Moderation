@@ -9,6 +9,7 @@ test('distributed admin bundle registers and renders settings through the Flarum
     const [vendor, packageName] = composer.name.split('/');
     const extensionId = `${vendor}-${packageName.replace(/flarum-ext-|flarum-/g, '')}`;
     const initializers = [];
+    const beforeMountCallbacks = [];
     const pages = new Map();
 
     class Component {}
@@ -28,7 +29,10 @@ test('distributed admin bundle registers and renders settings through the Flarum
                 initializers.push(initializer);
             },
         },
-        extensionData: {
+        beforeMount(callback) {
+            beforeMountCallbacks.push(callback);
+        },
+        registry: {
             for(id) {
                 return { registerPage: (page) => pages.set(id, page) };
             },
@@ -63,6 +67,9 @@ test('distributed admin bundle registers and renders settings through the Flarum
 
     assert.equal(initializers.length, 1);
     initializers.forEach((initialize) => initialize());
+    assert.equal(pages.size, 0);
+    assert.equal(beforeMountCallbacks.length, 1);
+    beforeMountCallbacks.forEach((callback) => callback());
     const Page = pages.get(extensionId);
     assert.ok(Page, `No settings page registered for ${extensionId}`);
     const page = new Page();
